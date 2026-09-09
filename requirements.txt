@@ -1,0 +1,4 @@
+# Core runtime (required)
+paramiko>=3.4      # SSH transport + SFTP npk upload
+routeros_api>=0.11 # RouterOS API transport (port 8728/8729)
+PyYAML>=6.0        # config file parsing

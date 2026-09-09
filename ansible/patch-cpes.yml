@@ -1,0 +1,56 @@
+---
+# Optional Ansible route: the tool's `inventory` command emits an INI inventory
+# of the currently pending CPEs (community.routeros connection), then you can
+# drive the upgrade from Ansible instead of the built-in interactive patcher.
+#
+#   cpe_patcher.py inventory --out hosts.ini --include-pass
+#   ansible-playbook -i hosts.ini ansible/patch-cpes.yml
+#
+# NOTE: community.routeros must be installed:
+#   ansible-galaxy collection install community.routeros ansible.netcommon
+
+- name: Patch MikroTik CPEs to pinned baseline
+  hosts: cpe_pending
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    baselines:
+      "6": "6.49.18"
+      "7": "7.16.2"
+  tasks:
+    - name: Read RouterOS version
+      community.routeros.command:
+        commands:
+          - /system resource print
+      register: resource
+
+    - name: Fail if version could not be read
+      fail:
+        msg: "Could not determine RouterOS version"
+      when: "'version:' not in resource.stdout[0]"
+
+    - name: Set update channel to stable
+      community.routeros.command:
+        commands:
+          - /system package update set channel=stable
+
+    - name: Check for updates
+      community.routeros.command:
+        commands:
+          - /system package update check-for-updates
+      register: check
+      async: 240
+      poll: 15
+
+    - name: Show available update
+      debug:
+        var: check.stdout_lines
+
+    # The actual install+reboot is intentionally NOT automated here:
+    # approvals happen one-by-one in cpe_patcher.py patch; the next scan/plan
+    # cycle confirms devices have reached baseline.
+    - name: Approve and run install (uncomment only after reviewing per-device)
+      community.routeros.command:
+        commands:
+          - /system package update install
+      when: false

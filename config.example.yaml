@@ -1,0 +1,36 @@
+# mikro-cpe-patch configuration example
+# Copy to config.yaml and adjust. Every value can also be overridden on the CLI.
+
+credentials:
+  username:                        # RouterOS admin username (required; pass --user <name> or set here)
+  password_env: MIKROTIK_PASSWORD  # read the password from this env var at runtime
+                                   # (fallback: interactive getpass prompt)
+
+baselines:
+  v6: 6.49.18                    # <= what every RouterOS 6 CPE will be pinned to (EOL - final v6)
+  v7: 7.24.2                     # v7 STABLE baseline - SECURITY FIXED (stable <= 7.24.1 is vulnerable)
+  v7_longterm: 7.23.4            # v7 LONG-TERM baseline - SECURITY FIXED (long-term <= 7.23.3 is vulnerable)
+
+# OS security posture (used by 'versions' audit + 'plan' to flag vulnerable devices)
+security:
+  v7_stable_fixed: 7.24.2        # first stable release with the fix
+  v7_longterm_fixed: 7.23.4      # first long-term release with the fix
+  # v6 has no fix: it is EOL at 6.49.18 and is always flagged as EOL
+
+scan:
+  subnet:                          # Network to scan (e.g., 192.168.1.0/24). See patch_cycle.py for interactive mode.
+  ports: [22, 8291, 8728, 8729]  # SSH, Winbox, RouterOS API, API-SSL
+  threads: 128
+  timeout: 0.7                   # seconds per port probe
+
+update:
+  method: auto                   # auto = built-in /system package update
+                                 # npk  = download official .npk + SFTP upload (exact pin on v6)
+  channel: stable
+  check_timeout: 240             # seconds allowed for check-for-updates
+  npk_cache: ./npk-cache
+
+reboot:
+  offline_timeout: 240           # max seconds to wait for the device to go down
+
+state_dir: ./state               # scan.json / plan.json live here
